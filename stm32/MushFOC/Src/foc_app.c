@@ -5,9 +5,25 @@
  * @LastEditTime: 2024-05-03 15:14:43
  * @Description: Modified according to CAW FOC project https://github.com/GUAIK-ORG/CawFOC
  */
-#include "foc_test.h"
+#include <foc_app.h>
+#include "usart.h"
 
 #define _PI 3.141592653589793f
+
+void FOC_APP_Init(FOC_APP_T *hfoc_app){
+	hfoc_app->target_angle = 0.0f;
+	hfoc_app->target_velocity = 0.0f;
+	hfoc_app->target_current = 0.0f;
+	hfoc_app->max_output_angle = FOC_DEFAULT_MAX_OUTPUT_ANGLE;
+	hfoc_app->max_zero_angle = FOC_DEFAULT_MAX_ZERO_ANGLE;
+	hfoc_app->min_zero_angle = FOC_DEFAULT_MIN_ZERO_ANGLE;
+	hfoc_app->max_output_velocity = FOC_DEFAULT_MAX_OUTPUT_VELOCITY;
+	hfoc_app->max_output_current = FOC_DEFAULT_MAX_OUTPUT_CURRENT;
+}
+
+void FOC_CheckCurrentOverflow(){
+
+}
 
 // 测试闭环速度控制
 void Foc_TestVelocity(FOC_T *hfoc,
@@ -45,9 +61,13 @@ void Foc_SetCurrentTorque(FOC_T *hfoc,
 						  float target_current) {
 	float Iq = FOC_GetCurrent(hfoc);
 	Iq = LOWPASS_FILTER_Calc(hfilter_current, Iq);
+	float t_Iq = PID_Calc(hpid_current, (target_current - Iq));
 	FOC_SetTorque(hfoc,
-				  PID_Calc(hpid_current, (target_current - Iq)),
+				  t_Iq,
 				  FOC_ElectricalAngle(hfoc));
+//	uint8_t buff[16];
+//	sprintf(buff, "%d %d\n", (int)(Iq*1000.0f), (int)(t_Iq*10.0f) );
+//	HAL_UART_Transmit(&huart2, (uint8_t *)buff, strlen(buff), 1000);
 }
 
 // 测试电流闭环速度控制
@@ -78,7 +98,7 @@ void Foc_TestCurrentAngle(FOC_T *hfoc,
 						  PID_T *hpid_angle,
 						  float target_angle) {
   // 测试用例的pid
-  PID_Set(hpid_current, 0.25, 0.01, 0.000, 100000, 6);
+  PID_Set(hpid_current, 0.25, 0.01, 0.000, 100000, hfoc->voltage_power_supply / 2);
   PID_Set(hpid_angle, 0.5, 0.01, 0, 100000, 10);
 
   float sensor_angle = hfoc->Sensor_GetAngle();
@@ -96,8 +116,8 @@ void Foc_TestCurrentVelocityAngle(FOC_T *hfoc,
 								  float target_angle) {
   // 测试用例的pid
   PID_Set(hpid_current, 1.2, 2, 0.01, 100000, hfoc->voltage_power_supply / 2);
-  PID_Set(hpid_velocity, 0.1, 2, 0, 100000, 1);
-  PID_Set(hpid_angle, 0.6, 0.01, 0.001, 100000, 6);
+  PID_Set(hpid_velocity, 0.1, 2, 0, 100000, 5);
+  PID_Set(hpid_angle, 0.6, 0.01, 0.001, 100000, 10);
 
   float sensor_angle = hfoc->Sensor_GetAngle();
   float sensor_velocity = hfoc->Sensor_GetVelocity();

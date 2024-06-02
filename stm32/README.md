@@ -6,4 +6,4 @@ A simple FOC with stm32 hal project.
 - FREERTOS.
 
 
-![stm32cubeMX](../img/stm32cube.pngi "stm32cubeMX")
+![stm32cubeMX](../img/stm32cube.png "stm32cubeMX")

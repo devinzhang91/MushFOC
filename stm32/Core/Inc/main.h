@@ -34,7 +34,7 @@ extern "C" {
 #include "foc_hal.h"
 #include "pid.h"
 #include "lowpass_filter.h"
-#include "foc_test.h"
+#include "foc_app.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -60,7 +60,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define I2C_SLAVE_ADDR 0x51
+#define I2C_SLAVE_ADDR 0x52
 #define I2C_SLAVE_RX_LEN 3
 #define I2C_SLAVE_TX_LEN 3
 
