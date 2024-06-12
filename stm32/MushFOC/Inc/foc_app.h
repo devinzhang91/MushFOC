@@ -42,6 +42,8 @@ typedef enum
   FOC_SET_MAX_OUTPUT_CURRENT,
   FOC_GET_MAX_OUTPUT_CURRENT,
 
+  FOC_SET_ACCUMULATED_THRESHOLD_ROATIO	= 0x60U,
+
   FOC_RESTART				= 0xA5U,
 } FOC_CMDTypeDef;
 
@@ -49,11 +51,12 @@ typedef enum
 #define FOC_DATAH_OFFSET	(8)
 #define FOC_DATAL_OFFSET	(0)
 
-#define FOC_DEFAULT_MAX_OUTPUT_ANGLE		(1.0f)
-#define FOC_DEFAULT_MAX_ZERO_ANGLE			(3.14f)
-#define FOC_DEFAULT_MIN_ZERO_ANGLE			(-3.14f)
-#define FOC_DEFAULT_MAX_OUTPUT_VELOCITY		(10.0f)
-#define FOC_DEFAULT_MAX_OUTPUT_CURRENT		(3.0f)
+#define FOC_DEFAULT_MAX_OUTPUT_ANGLE				(1.0f)
+#define FOC_DEFAULT_MAX_ZERO_ANGLE					(3.14f)
+#define FOC_DEFAULT_MIN_ZERO_ANGLE					(-3.14f)
+#define FOC_DEFAULT_MAX_OUTPUT_VELOCITY				(10.0f)
+#define FOC_DEFAULT_MAX_OUTPUT_CURRENT				(3.0f)
+#define	FOC_DEFAULT_ACCUMULATED_THRESHOLD_ROATIO	(0.35)
 
 typedef struct {
   float 		target_angle;
@@ -66,6 +69,8 @@ typedef struct {
 
   float 		target_current;
   float 		max_output_current;
+
+  float			accumulated_heat_threshold_roatio;
 } FOC_APP_T;
 
 void FOC_APP_Init(FOC_APP_T *hfoc_app);

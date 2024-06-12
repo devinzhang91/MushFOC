@@ -9,6 +9,7 @@
 #include "usart.h"
 
 #define _PI 3.141592653589793f
+uint8_t buff[16];
 
 void FOC_APP_Init(FOC_APP_T *hfoc_app){
 	hfoc_app->target_angle = 0.0f;
@@ -19,6 +20,7 @@ void FOC_APP_Init(FOC_APP_T *hfoc_app){
 	hfoc_app->min_zero_angle = FOC_DEFAULT_MIN_ZERO_ANGLE;
 	hfoc_app->max_output_velocity = FOC_DEFAULT_MAX_OUTPUT_VELOCITY;
 	hfoc_app->max_output_current = FOC_DEFAULT_MAX_OUTPUT_CURRENT;
+	hfoc_app->accumulated_heat_threshold_roatio = FOC_DEFAULT_ACCUMULATED_THRESHOLD_ROATIO;
 }
 
 void FOC_CheckCurrentOverflow(){
@@ -65,9 +67,8 @@ void Foc_SetCurrentTorque(FOC_T *hfoc,
 	FOC_SetTorque(hfoc,
 				  t_Iq,
 				  FOC_ElectricalAngle(hfoc));
-//	uint8_t buff[16];
-//	sprintf(buff, "%d %d\n", (int)(Iq*1000.0f), (int)(t_Iq*10.0f) );
-//	HAL_UART_Transmit(&huart2, (uint8_t *)buff, strlen(buff), 1000);
+	sprintf(buff, "%d %d\n", (int)(Iq*1000.0f), (int)(t_Iq*10.0f) );
+	HAL_UART_Transmit_DMA(&huart2, (uint8_t *)buff, strlen(buff));
 }
 
 // 测试电流闭环速度控制
@@ -98,10 +99,16 @@ void Foc_TestCurrentAngle(FOC_T *hfoc,
 						  PID_T *hpid_angle,
 						  float target_angle) {
   // 测试用例的pid
-  PID_Set(hpid_current, 0.25, 0.01, 0.000, 100000, hfoc->voltage_power_supply / 2);
-  PID_Set(hpid_angle, 0.5, 0.01, 0, 100000, 10);
+//  // foc yaw
+//  PID_Set(hpid_current, 0.27, 0.01, 0.000, 100000, hfoc->voltage_power_supply / 2);
+//  PID_Set(hpid_angle, 0.4, 0.9, 0.009, 100000, 20);
+  // foc pitch
+  PID_Set(hpid_current, 0.13, 0.06, 0.000, 100000, hfoc->voltage_power_supply / 2);
+  PID_Set(hpid_angle, 0.62, 0.95, 0.004, 100000, 30);
 
   float sensor_angle = hfoc->Sensor_GetAngle();
+//  sprintf(buff, "%d\n", (int)(sensor_angle*1000.0f));
+//  HAL_UART_Transmit_DMA(&huart2, (uint8_t *)buff, strlen(buff));
   float target_current = PID_Calc(hpid_angle, (target_angle - hfoc->dir * sensor_angle)*180/_PI);
   Foc_SetCurrentTorque(hfoc, hfilter_current, hpid_current, target_current);
 }
@@ -115,9 +122,9 @@ void Foc_TestCurrentVelocityAngle(FOC_T *hfoc,
 								  PID_T *hpid_angle,
 								  float target_angle) {
   // 测试用例的pid
-  PID_Set(hpid_current, 1.2, 2, 0.01, 100000, hfoc->voltage_power_supply / 2);
-  PID_Set(hpid_velocity, 0.1, 2, 0, 100000, 5);
-  PID_Set(hpid_angle, 0.6, 0.01, 0.001, 100000, 10);
+  PID_Set(hpid_current, 0.4, 20, 0.00, 100000, hfoc->voltage_power_supply / 2);
+  PID_Set(hpid_velocity, 0.1, 0.01, 0.000, 100000, 0.5);
+  PID_Set(hpid_angle, 0.08, 0.01, 0.001, 100000, 10);
 
   float sensor_angle = hfoc->Sensor_GetAngle();
   float sensor_velocity = hfoc->Sensor_GetVelocity();

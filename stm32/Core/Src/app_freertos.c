@@ -198,8 +198,8 @@ void StartFOCTask(void *argument)
   PID_Init(&anglePID, 0.5, 0.01, 0, 100000, 10);
   PID_Init(&currentPID, 0.2, 0.01, 0, 100000, 6);
 
-  LOWPASS_FILTER_Init(&currentFilter, 0.02);
-  LOWPASS_FILTER_Init(&velocityFilter, 0.02);
+  LOWPASS_FILTER_Init(&currentFilter, 0.05);
+  LOWPASS_FILTER_Init(&velocityFilter, 0.01);
 
   FOC_AlignmentSensor(&foc);
   //set start angle and disable foc
@@ -212,10 +212,10 @@ void StartFOCTask(void *argument)
 //	Foc_TestAngle(&foc, &anglePID, 0);
 //	Foc_TestVelocity(&foc, &velocityFilter, &velocityPID, 10);
 //	Foc_TestCurrentVelocity(&foc, &currentFilter, &velocityFilter, &currentPID, &velocityPID, 10);
-//	Foc_TestCurrentAngle(&foc, &currentFilter, &currentPID, &anglePID, targetAngleRad);
-	Foc_TestCurrentVelocityAngle(&foc, &currentFilter, &velocityFilter, &currentPID, &velocityPID, &anglePID, foc_app.target_angle);
+	Foc_TestCurrentAngle(&foc, &currentFilter, &currentPID, &anglePID, foc_app.target_angle);
+//	Foc_TestCurrentVelocityAngle(&foc, &currentFilter, &velocityFilter, &currentPID, &velocityPID, &anglePID, foc_app.target_angle);
 	FOC_SensorUpdate(&foc);
-    osDelay(1);
+    osDelay(10);
   }
   /* USER CODE END StartFOCTask */
 }
@@ -263,9 +263,8 @@ void StartMsgTask(void *argument)
 			case FOC_SET_OFF:
 				FOC_SetVoltageLimit(&foc, 0.0f);
 				break;
-
 			case FOC_SET_ANGLE:
-				float target_angle_rad = (data - 90.0f)/180.0f*_PI;
+				float target_angle_rad = (data - 180.0f)/180.0f*_PI;
 				foc_app.target_angle = target_angle_rad;
 				break;
 			case FOC_SET_MAX_ZERO_ANGLE:
@@ -275,12 +274,14 @@ void StartMsgTask(void *argument)
 				foc_app.min_zero_angle = (float)data;
 				break;
 			case FOC_SET_MAX_OUTPUT_VELOCITY:
-				foc_app.max_output_velocity = (float)data;
+				foc_app.max_output_velocity = (float)data/1000.0f;
 				break;
 			case FOC_SET_MAX_OUTPUT_CURRENT:
-				foc_app.max_output_current = (float)data;
+				foc_app.max_output_current = (float)data/1000.0f;
 				break;
-
+			case FOC_SET_ACCUMULATED_THRESHOLD_ROATIO:
+				foc_app.accumulated_heat_threshold_roatio = (float)data/1000.0f;
+				break;
 			case FOC_RESTART:
 				__HAL_RCC_CLEAR_RESET_FLAGS();
 				HAL_Delay(500);
@@ -297,12 +298,14 @@ void StartMsgTask(void *argument)
 /* USER CODE BEGIN Header_StartWatchDogTask */
 /**
 * @brief Function implementing the watchdogTask thread.
+*  Used to detect current overload, using the square of the current as the calculation.
+*  Currently setting 255mA as the maximum current, so just using uint8_t to story past.
+*  In this case, used to determine whether the rotation is blocked from a usage perspective.
 * @param argument: Not used
 * @retval None
 */
 #define	NUM_HISTORYs_RECORD				(32)
-#define	ACCUMULATED_THRESHOLD_ROATIO	(0.3)
-#define	ACCUMULATED_THRESHOLD			(ACCUMULATED_THRESHOLD_ROATIO*NUM_HISTORYs_RECORD*255*255)
+#define	ACCUMULATED_MAXIMUM				(NUM_HISTORYs_RECORD*255*255)
 /* USER CODE END Header_StartWatchDogTask */
 void StartWatchDogTask(void *argument)
 {
@@ -321,7 +324,7 @@ void StartWatchDogTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	float sensor_angle = hfoc->Sensor_GetAngle();
+//	float sensor_angle = hfoc->Sensor_GetAngle();
 	float Iq = FOC_GetCurrent(hfoc);
 	abs_current = (uint32_t)(Iq<0? (Iq*-1000) : (Iq*1000)); ///Absolute value of current(mA)
 	uint8_t cur_current = abs_current>255? 255:abs_current;
@@ -332,9 +335,9 @@ void StartWatchDogTask(void *argument)
 		histroy_pointer = 0;
 	}
 
-//	uint32_t threshold_current = (uint32_t)(ACCUMULATED_CURRENT_THRESHOLD_RATIO*foc_app.max_output_current*NUM_HISTORYs_RECORD);
+	uint32_t threshold_current = (uint32_t)(ACCUMULATED_MAXIMUM * foc_app.accumulated_heat_threshold_roatio);
 	if(accumulated_heat<0) accumulated_heat=0;
-	if(accumulated_heat > ACCUMULATED_THRESHOLD){
+	if(accumulated_heat > threshold_current){
 		FOC_Abort(&foc);
 		Error_Handler();
 	}
@@ -343,11 +346,16 @@ void StartWatchDogTask(void *argument)
   /* USER CODE END StartWatchDogTask */
 }
 
+//uint16_t k_data = 180;
 /* LedCallback function */
 void LedCallback(void *argument)
 {
   /* USER CODE BEGIN LedCallback */
   HAL_GPIO_TogglePin(LED_PORT, LED_PIN);
+//  k_data += 10;
+//  if(k_data>=360) k_data = 180;
+//  float target_angle_rad = (k_data - 180.0f)/180.0f*_PI;
+//  foc_app.target_angle = target_angle_rad;
   /* USER CODE END LedCallback */
 }
 
@@ -410,6 +418,7 @@ void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 		case FOC_SET_MAX_OUTPUT_VELOCITY:
 		case FOC_SET_CURRENT:
 		case FOC_SET_MAX_OUTPUT_CURRENT:
+		case FOC_SET_ACCUMULATED_THRESHOLD_ROATIO:
 
 			uint32_t revData = 	((uint32_t)cmd			<<FOC_CMD_OFFSET) |
 								((uint32_t)i2cRxBuff[1]	<<FOC_DATAH_OFFSET) |
