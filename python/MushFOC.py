@@ -68,9 +68,10 @@ class MushFOC:
         """ Sets the angle.
 
         Args:
-            angle (int): 0 means -180 degree, 180 means 0 degree, 360 means 180 degree
+            angle (int): -90 means -90 degree, 0 means 0 degree, 90 means 90 degree
             wait_ms (int, optional): _description_. Defaults to 10.
         """
+        angle = angle + 180
         angle_H = angle>>8
         angle_L = angle&0xFF
         self.bus.write_i2c_block_data(self.address, self.FOC_SET_ANGLE, [angle_H, angle_L])
@@ -83,8 +84,9 @@ class MushFOC:
         """ Sets the max output angle in PID control.
 
         Args:
-            angle (int): 0 means -180 degree, 180 means 0 degree, 360 means 180 degree
+            angle (int): -90 means -90 degree, 0 means 0 degree, 90 means 90 degree
         """
+        angle = angle + 180
         angle_H = angle>>8
         angle_L = angle&0xFF
         self.bus.write_i2c_block_data(self.address, self.FOC_SET_MAX_OUTPUT_ANGLE, [angle_H, angle_L])
@@ -96,8 +98,9 @@ class MushFOC:
         """ Sets the max zero angle.
 
         Args:
-            angle (int): 0 means -180 degree, 180 means 0 degree, 360 means 180 degree
+            angle (int): -90 means -90 degree, 0 means 0 degree, 90 means 90 degree
         """
+        angle = angle + 180
         angle_H = angle>>8
         angle_L = angle&0xFF
         self.bus.write_i2c_block_data(self.address, self.FOC_SET_MAX_ZERO_ANGLE, [angle_H, angle_L])
@@ -109,8 +112,9 @@ class MushFOC:
         """ Sets the min zero angle.
 
         Args:
-            angle (int): 0 means -180 degree, 180 means 0 degree, 360 means 180 degree
+            angle (int): -90 means -90 degree, 0 means 0 degree, 90 means 90 degree
         """
+        angle = angle + 180
         angle_H = angle>>8
         angle_L = angle&0xFF
         self.bus.write_i2c_block_data(self.address, self.FOC_SET_MIN_ZERO_ANGLE, [angle_H, angle_L])
